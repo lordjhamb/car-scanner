@@ -20,16 +20,38 @@ each user's own API key.
 - **Assistant.** Chat limited to car diagnostics. It reads the car's data, searches the web, remembers facts
   about each car, and can build guided plans. It can only *ask* to clear codes; you approve in the app.
 
-## Quick start
+![A guided test: hold the engine at 2,500 rpm, with a live meter](docs/img/guided-test.png)
+
+## Download
+
+**[Download page](https://lordjhamb.github.io/car-scanner/)** · [Latest release](https://github.com/lordjhamb/car-scanner/releases/latest)
+
+| Your computer | File |
+|---|---|
+| Mac with Apple silicon (M1 or later) | [CarScanner-macOS-AppleSilicon.dmg](https://github.com/lordjhamb/car-scanner/releases/latest/download/CarScanner-macOS-AppleSilicon.dmg) |
+| Windows 10 / 11 | [CarScanner-Windows.zip](https://github.com/lordjhamb/car-scanner/releases/latest/download/CarScanner-Windows.zip) |
+| Linux (x86_64) | [CarScanner-Linux.tar.gz](https://github.com/lordjhamb/car-scanner/releases/latest/download/CarScanner-Linux.tar.gz) |
+
+Open it and Car Scanner starts in your browser at `http://127.0.0.1:8077`, already signed in. Everything is
+stored on your computer (`~/Library/Application Support/Car Scanner` on Mac, `%APPDATA%\Car Scanner` on Windows).
+
+**First launch:** the app isn't signed with a paid certificate yet, so your computer will warn you.
+On Mac, right-click the app and choose **Open**. On Windows, choose **More info → Run anyway**. On Windows,
+the black window that opens is the app; close it (or use **Quit Car Scanner**) to stop it.
+
+No adapter? Choose **Demo car** when connecting: a simulated 2013 pickup. Pick "Rolled-back mileage"
+to see the tampering detection.
+
+## Run from source
+
+Needs Python 3.11+ (this also covers Intel Macs):
 
 ```bash
-git clone <this repo> car-scanner && cd car-scanner
+git clone https://github.com/lordjhamb/car-scanner && cd car-scanner
 make install          # creates .venv, installs dependencies
-make run              # http://127.0.0.1:8077
+make desktop          # personal mode: opens the browser, signs you in automatically
+# or: make run        # server mode, with accounts and sign-in
 ```
-
-Create an account, choose **New scan**, then either pick your adapter or **Demo car** (a simulated
-2013 pickup; choose "Rolled-back mileage" to see the tampering detection). The demo needs no hardware.
 
 **Using the vLinker FS:** plug it into the OBD port, turn the ignition on and connect USB. On macOS it
 appears as `/dev/cu.usbserial-…`. If it doesn't, install the FTDI VCP driver.
@@ -49,6 +71,20 @@ Settings are environment variables; see [`.env.example`](.env.example). In produ
 | `CARSCAN_ALLOW_REGISTRATION` | `true` | Turn off to stop new sign-ups |
 | `CARSCAN_CLAUDE_MODEL` | `claude-opus-5-5` | Default Claude model (users can change theirs) |
 | `CARSCAN_OPENAI_MODEL` | `gpt-5` | Default OpenAI model (users can change theirs) |
+
+## Publishing a release
+
+1. Bump the version in `carscan/__init__.py` and `pyproject.toml`.
+2. `git tag v0.1.0 && git push origin v0.1.0`
+
+The [Release workflow](.github/workflows/release.yml) runs the tests, builds the Mac, Windows and Linux
+apps with PyInstaller on GitHub's machines, test-launches each one and attaches them to a GitHub release.
+To build without publishing, run the workflow by hand from the Actions tab.
+
+**Download page:** in the repo's Settings → Pages, choose "Deploy from a branch", branch `main`, folder `/docs`.
+It appears at https://lordjhamb.github.io/car-scanner/.
+
+Build the app locally with `make package` (output in `dist/`).
 
 ## Testing
 
@@ -73,12 +109,19 @@ carscan/
   db.py         SQLite schema and migrations
   security.py   scrypt passwords, session tokens, Fernet encryption, rate limiting
   app.py        app factory, security headers, static frontend
+  desktop.py    launcher for the downloadable app (data folder, port, browser, quit)
 web/            no-build frontend (ES modules): views, styles, loader animation
+packaging/      PyInstaller spec and launcher for the Mac / Windows / Linux builds
+docs/           GitHub Pages download page
 tests/          pytest suite + node:test frontend tests
 ```
 
 ## How the pieces fit
 
+- **Personal installs** (the downloads): the app listens only on `127.0.0.1` and refuses requests addressed
+  to any other host name (blocks DNS-rebinding). It signs the computer's owner in automatically; turn this off
+  with `CARSCAN_AUTO_LOGIN=false` on a shared computer. It checks GitHub Releases for a newer version and
+  sends nothing else.
 - **Sessions:** HttpOnly, SameSite=Lax cookie holding a random token (only its SHA-256 is stored).
   Every state-changing request also needs a custom header and the per-session CSRF token.
 - **One adapter, many users:** the adapter belongs to whoever connected it; other accounts get

@@ -1,0 +1,100 @@
+name: Release
+
+# Publish a release:   git tag v0.1.0 && git push origin v0.1.0
+# Dry run (build only): Actions tab -> Release -> Run workflow
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: requirements-dev.txt }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+      - run: scripts/test.sh
+      - name: Tag matches the app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          v=$(.venv/bin/python -c "import carscan; print(carscan.__version__)")
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "Tag ${GITHUB_REF_NAME} != carscan.__version__ v$v"; exit 1; }
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            asset: CarScanner-macOS-AppleSilicon.dmg
+          - os: windows-latest
+            asset: CarScanner-Windows.zip
+          - os: ubuntu-22.04
+            asset: CarScanner-Linux.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install
+        run: python -m pip install -r requirements.txt pyinstaller
+      - name: Build
+        run: pyinstaller packaging/car-scanner.spec --noconfirm
+
+      - name: Smoke test and package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          "dist/Car Scanner.app/Contents/MacOS/CarScanner" --version
+          mkdir -p dmg && cp -R "dist/Car Scanner.app" dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname "Car Scanner" -srcfolder dmg -ov -format UDZO "${{ matrix.asset }}"
+      - name: Smoke test and package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dist/CarScanner/CarScanner.exe --version
+          Copy-Item packaging/WINDOWS-README.txt dist/CarScanner/README.txt
+          Compress-Archive -Path dist/CarScanner -DestinationPath "${{ matrix.asset }}"
+      - name: Smoke test and package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          dist/CarScanner/CarScanner --version
+          tar -czf "${{ matrix.asset }}" -C dist CarScanner
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: assets, merge-multiple: true }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: assets/*
+          generate_release_notes: true
+          body: |
+            ## Download
+            | Your computer | File |
+            |---|---|
+            | Mac with Apple silicon (M1 or later) | **CarScanner-macOS-AppleSilicon.dmg** |
+            | Windows 10 / 11 | **CarScanner-Windows.zip** |
+            | Linux (x86_64) | **CarScanner-Linux.tar.gz** |
+
+            **Mac:** open the .dmg and drag Car Scanner to Applications. The first time, right-click the app and choose **Open**: it isn't signed with a paid Apple certificate yet, so macOS warns you.
+            **Windows:** unzip, then run `CarScanner.exe`. If SmartScreen appears, choose **More info → Run anyway**. The black window that opens is the app; close it to stop Car Scanner. Some PCs need the [FTDI driver](https://ftdichip.com/drivers/vcp-drivers/) for the vLinker FS.
+            **Linux:** extract and run `CarScanner/CarScanner`. You may need to add yourself to the `dialout` group to use the adapter.
+
+            Car Scanner opens in your browser at http://127.0.0.1:8077. Everything stays on your computer.

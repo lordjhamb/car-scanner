@@ -1,5 +1,5 @@
 // App shell: session, state, hash router, sidebar layout.
-import { api, carName, html, mount, setCsrf, toast } from "./lib.js";
+import { api, carName, html, mount, safeUrl, setCsrf, toast } from "./lib.js";
 import * as auth from "./views/auth.js";
 import * as garage from "./views/garage.js";
 import * as onboarding from "./views/onboarding.js";
@@ -13,6 +13,8 @@ import * as settings from "./views/settings.js";
 
 export const app = {
   user: null,
+  system: { local_mode: false, can_quit: false },
+  update: null,
   adapter: { connected: false },
   flow: {},                       // onboarding scratch: odometer, goal, problem...
   get carId() { return Number(localStorage.getItem(`car:${this.user?.id}`)) || null; },
@@ -75,9 +77,15 @@ function shell(active) {
       <a class="btn primary sm" href="#/new/connect">New scan</a>
       <nav class="nav" aria-label="Sections">${items.map(([k, href, label]) =>
         html`<a href="${href}" aria-current="${k === active ? "page" : "false"}">${label}</a>`)}</nav>
-      <div class="right" style="margin-top:auto;margin-left:0;padding:0 10px">
-        <div class="tiny faint">${app.user.email}</div>
-        <button class="btn link tiny" data-logout>Sign out</button>
+      <div class="stack g8" style="margin-top:auto;padding:0 10px">
+        ${app.update?.available ? html`<a class="note small" href="${safeUrl(app.update.url)}" target="_blank" rel="noopener noreferrer"
+          style="text-decoration:none">Version ${app.update.latest} is available. <u>Download</u></a>` : ""}
+        <div class="tiny faint">${app.system.local_mode && app.user.email.endsWith("@this-computer.local") ? "Signed in on this computer" : app.user.email}</div>
+        <div class="row g8">
+          <button class="btn link tiny" data-logout>Sign out</button>
+          ${app.system.can_quit ? html`<button class="btn link tiny" data-quit>Quit Car Scanner</button>` : ""}
+        </div>
+        <div class="tiny faint">v${app.system.version || ""}</div>
       </div>
     </aside>
     <main class="content"><div class="inner" id="view"></div></main></div>`;
@@ -98,6 +106,7 @@ async function route() {
     await Promise.all([app.refreshCar(), app.refreshAdapter()]);
     mount(root, shell(active));
     root.querySelector("[data-logout]").addEventListener("click", logout);
+    root.querySelector("[data-quit]")?.addEventListener("click", quit);
     target = document.getElementById("view");
   }
   try {
@@ -113,14 +122,33 @@ async function route() {
 
 async function logout() {
   try { await api("/auth/logout", { method: "POST" }); } catch { /* already gone */ }
+  sessionStorage.setItem("noAutoLogin", "1");      // don't sign straight back in
   app.user = null; setCsrf(null); location.hash = "#/login";
 }
 
+async function quit() {
+  if (!confirm("Quit Car Scanner? The adapter is disconnected and this page stops working until you open the app again.")) return;
+  try { await api("/system/shutdown", { method: "POST" }); } catch { /* server already stopping */ }
+  mount(root, html`<main class="flow"><section class="main"><h1>Car Scanner has stopped</h1>
+    <p class="lead mt8">You can close this tab. Open the Car Scanner app again to continue; your garage is saved.</p></section></main>`);
+}
+
+export async function localLogin() {
+  const data = await api("/system/local-login", { method: "POST" });
+  sessionStorage.removeItem("noAutoLogin");
+  app.user = data.user; setCsrf(data.csrf);
+}
+
 export async function boot() {
+  try { app.system = await api("/system/info"); } catch { /* older server */ }
   try {
     const me = await api("/auth/me");
     app.user = me.user; setCsrf(me.csrf);
   } catch { app.user = null; }
+  if (!app.user && app.system.auto_login && !sessionStorage.getItem("noAutoLogin")) {
+    try { await localLogin(); } catch { /* fall back to the sign-in page */ }
+  }
+  if (app.user) api("/system/update").then((u) => { app.update = u; if (u.available) route(); }).catch(() => {});
   window.addEventListener("hashchange", route);
   route();
 }

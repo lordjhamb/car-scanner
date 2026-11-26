@@ -1,6 +1,6 @@
 // Sign in / create account.
 import { api, guard, html, mount } from "../lib.js";
-import { signedIn } from "../app.js";
+import { app, localLogin, signedIn } from "../app.js";
 
 function page(kind) {
   const isLogin = kind === "login";
@@ -22,6 +22,8 @@ function page(kind) {
         <p class="error-text" data-err role="alert"></p>
         <button class="btn primary lg" type="submit">${isLogin ? "Sign in" : "Create account"}</button>
       </form>
+      ${app.system.auto_login ? html`<div class="note info mt24"><b>Using Car Scanner on your own computer?</b>
+        You don't need an account. <button class="btn link" data-local style="color:var(--ink)">Continue without signing in</button></div>` : ""}
       <p class="small muted mt24">${isLogin ? html`New here? <a href="#/register">Create an account</a>`
         : html`Already have an account? <a href="#/login">Sign in</a>`}</p>
     </section>
@@ -39,6 +41,9 @@ function page(kind) {
 }
 
 function bind(root, kind) {
+  root.querySelector("[data-local]")?.addEventListener("click", (e) => guard(async () => {
+    await localLogin(); location.hash = "#/garage";
+  }, e.target));
   const form = root.querySelector("form");
   form.addEventListener("submit", (e) => {
     e.preventDefault();

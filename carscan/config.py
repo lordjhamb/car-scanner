@@ -28,6 +28,11 @@ class Settings:
     default_claude_model: str = "claude-opus-5-5"
     default_openai_model: str = "gpt-5"
     login_attempts_per_10min: int = 10
+    # Desktop / personal install: bound to this computer only, signs in automatically.
+    local_mode: bool = False
+    auto_login: bool = True
+    update_check: bool = False
+    github_repo: str = "lordjhamb/car-scanner"
     extra: dict = field(default_factory=dict)
 
     @property
@@ -77,6 +82,10 @@ def load_settings(**overrides) -> Settings:
         port=int(os.environ.get("CARSCAN_PORT", "8077")),
         default_claude_model=os.environ.get("CARSCAN_CLAUDE_MODEL", "claude-opus-5-5"),
         default_openai_model=os.environ.get("CARSCAN_OPENAI_MODEL", "gpt-5"),
+        local_mode=_bool("CARSCAN_LOCAL_MODE", False),
+        auto_login=_bool("CARSCAN_AUTO_LOGIN", True),
+        update_check=_bool("CARSCAN_UPDATE_CHECK", False),
+        github_repo=os.environ.get("CARSCAN_GITHUB_REPO", "lordjhamb/car-scanner"),
     )
     for k, v in overrides.items():
         setattr(s, k, v)

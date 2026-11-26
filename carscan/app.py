@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -15,13 +16,16 @@ from . import __version__, db
 from .adapter import AdapterManager, Busy, NotOwner
 from .ai.assistant import default_provider_factory
 from .ai.base import AIError
-from .api import auth, garage, workflows
+from .api import auth, garage, system, workflows
 from .config import Settings, load_settings
 from .obd import AdapterError
 from .obd.dtc_db import load_custom
 from .security import RateLimiter, SecretBox
 
-WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+# In a packaged desktop build (PyInstaller) the web files sit next to the bundled code.
+_BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
+WEB_DIR = _BASE / "web"
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]"}
 log = logging.getLogger("carscan")
 
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
@@ -30,7 +34,7 @@ CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' 
 
 
 def create_app(settings: Settings | None = None, adapter: AdapterManager | None = None,
-               provider_factory=None) -> FastAPI:
+               provider_factory=None, release_fetcher=None) -> FastAPI:
     settings = settings or load_settings()
     db.migrate(settings.db_path)
     load_custom(str(settings.data_dir / "custom_dtcs.json"))
@@ -43,6 +47,18 @@ def create_app(settings: Settings | None = None, adapter: AdapterManager | None 
     app.state.box = SecretBox(settings.secret_key)
     app.state.provider_factory = provider_factory or default_provider_factory
     app.state.login_limiter = RateLimiter(settings.login_attempts_per_10min, 600)
+    app.state.release_fetcher = release_fetcher or system.fetch_latest_release
+    app.state.shutdown = None          # set by the desktop launcher
+
+    if settings.local_mode:
+        @app.middleware("http")
+        async def local_only(request: Request, call_next):
+            # Personal installs listen on loopback only. Rejecting other Host names also stops
+            # DNS-rebinding attacks, where a website points its own domain at 127.0.0.1.
+            host = (request.headers.get("host") or "").rsplit(":", 1)[0].lower()
+            if host not in LOCAL_HOSTS:
+                return JSONResponse({"detail": "Car Scanner only answers on this computer."}, status_code=403)
+            return await call_next(request)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
@@ -77,6 +93,7 @@ def create_app(settings: Settings | None = None, adapter: AdapterManager | None 
     app.include_router(auth.router)
     app.include_router(garage.router)
     app.include_router(workflows.router)
+    app.include_router(system.router)
 
     @app.get("/api/health")
     def health():
