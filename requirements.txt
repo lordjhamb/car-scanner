@@ -1,0 +1,9 @@
+# Runtime dependencies (pinned ranges live in pyproject.toml)
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pyserial>=3.5
+cryptography>=42
+python-multipart>=0.0.9
+pillow>=10.3
+anthropic>=2.0
+openai>=1.50
