@@ -19,3 +19,6 @@ What the app protects, and how:
   and HTML escaped by default in the frontend templating.
 - **The car:** the assistant can never clear codes or send raw commands. Clearing always needs the user
   to type `CLEAR`.
+- **Personal installs:** listen on `127.0.0.1` only and reject any request whose Host isn't
+  `127.0.0.1`/`localhost` (stops DNS-rebinding). Password-free sign-in only works from the same machine,
+  and that account has a random password nobody knows, so it can't be signed into by password.

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Car Scanner: diagnose any car with a USB OBD-II adapter</title>
+<meta name="description" content="Free car diagnostics for your laptop. Read every module, follow guided tests, verify the mileage, and get an AI condition report. Works with the vLinker FS and other ELM327 adapters.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='2' width='12' height='12' rx='3' fill='%23D9480F'/%3E%3C/svg%3E">
+<style>
+  :root { --bg:#F6F5F2; --surface:#fff; --sunken:#EFEEEA; --line:#E3E1DB; --strong:#CBC8C0; --ink:#191816; --muted:#5C5A54; --faint:#75736C; --brand:#D9480F; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "IBM Plex Sans", system-ui, sans-serif; }
+  a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--strong); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+  header { display: flex; align-items: center; gap: 24px; height: 68px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; text-decoration: none; }
+  .logo::before { content: ""; width: 13px; height: 13px; border-radius: 3px; background: var(--brand); }
+  header nav { margin-left: auto; display: flex; gap: 20px; font-size: 15px; }
+  h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.08; letter-spacing: -0.03em; font-weight: 600; margin: 56px 0 0; max-width: 16ch; text-wrap: balance; }
+  .lead { font-size: 19px; color: var(--muted); max-width: 58ch; margin: 18px 0 0; }
+  h2 { font-size: 26px; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 36px; }
+  .dl { display: block; padding: 18px 20px; border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--line); text-decoration: none; }
+  .dl b { display: block; font-size: 17px; }
+  .dl span { color: var(--muted); font-size: 14px; }
+  .dl.mine { background: var(--ink); color: #fff; box-shadow: 0 6px 20px rgba(25,24,22,.18); }
+  .dl.mine span { color: #C9C6BE; }
+  .small { font-size: 14px; color: var(--muted); }
+  section { margin-top: 88px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px 40px; margin-top: 24px; }
+  .grid h3 { margin: 0 0 6px; font-size: 17px; }
+  .grid p { margin: 0; color: var(--muted); }
+  .shot { margin-top: 36px; border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 20px 50px rgba(25,24,22,.10); background: #fff; }
+  .shot img { display: block; width: 100%; height: auto; }
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 14px; }
+  ol.steps li { counter-increment: s; display: flex; gap: 16px; }
+  ol.steps li::before { content: counter(s); flex: none; width: 28px; height: 28px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px var(--strong); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+  .panel { background: var(--sunken); border-radius: 14px; padding: 26px 30px; }
+  code, .mono { font-family: "IBM Plex Mono", monospace; font-size: 14px; }
+  pre { background: #fff; border-radius: 10px; padding: 14px 16px; box-shadow: 0 0 0 1px var(--line); overflow-x: auto; }
+  footer { margin: 96px 0 40px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--faint); font-size: 14px; display: flex; gap: 20px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="./">Car Scanner</a>
+    <nav><a href="#how">How it works</a><a href="#setup">Setup</a><a href="https://github.com/lordjhamb/car-scanner">GitHub</a></nav>
+  </header>
+
+  <main>
+    <h1>Diagnose any car from your laptop</h1>
+    <p class="lead">Plug a USB OBD-II adapter into the car, open Car Scanner, and read every module: engine, ABS, airbags, body and more. Guided tests, a mileage check, a photo inspection and an AI assistant. Free, and everything stays on your computer.</p>
+
+    <div class="downloads" id="downloads">
+      <a class="dl" data-os="mac" href="https://github.com/lordjhamb/car-scanner/releases/latest/download/CarScanner-macOS-AppleSilicon.dmg">
+        <b>Download for Mac</b><span>Apple silicon (M1 or later) · .dmg</span></a>
+      <a class="dl" data-os="win" href="https://github.com/lordjhamb/car-scanner/releases/latest/download/CarScanner-Windows.zip">
+        <b>Download for Windows</b><span>Windows 10 / 11 · .zip</span></a>
+      <a class="dl" data-os="linux" href="https://github.com/lordjhamb/car-scanner/releases/latest/download/CarScanner-Linux.tar.gz">
+        <b>Download for Linux</b><span>x86_64 · .tar.gz</span></a>
+    </div>
+    <p class="small">No adapter yet? The app includes a demo car, so you can try everything first. Older Intel Mac? <a href="https://github.com/lordjhamb/car-scanner#run-from-source">Run it from source</a>. <a href="https://github.com/lordjhamb/car-scanner/releases">All releases</a>.</p>
+
+    <div class="shot"><img src="img/guided-test.png" alt="A guided test asking the driver to hold the engine at 2,500 rpm, with a live meter and readings" width="1440" height="900"></div>
+
+    <section id="how">
+      <h2>What it does</h2>
+      <div class="grid">
+        <div><h3>Every module, not just the engine</h3><p>Generic OBD-II codes plus a scan of every module on CAN cars, labelled active, pending or history.</p></div>
+        <div><h3>Guided tests</h3><p>Step-by-step checks with live readings: hold 2,500 rpm, switch on every load, drive at a steady speed. Skip any step.</p></div>
+        <div><h3>Fix any problem</h3><p>Describe it in your own words: a noise, a light, a vibration. The AI reads the car, looks up known issues and builds a plan.</p></div>
+        <div><h3>Mileage check</h3><p>Compares the odometer with what other modules and past fault codes remember, and gives a confidence score.</p></div>
+        <div><h3>Photo inspection</h3><p>A guided 29-shot walkaround. The AI flags repairs, rust, leaks and wear, and tells you what's missing.</p></div>
+        <div><h3>Your data, your keys</h3><p>Your garage stays on your computer. The AI uses your own Anthropic or OpenAI key, and only when you ask.</p></div>
+      </div>
+      <div class="shot"><img src="img/mileage-check.png" alt="Mileage check showing a confidence score of 100 out of 100 and every stored mileage below the dashboard reading" width="1440" height="900"></div>
+    </section>
+
+    <section id="setup">
+      <h2>Setup</h2>
+      <ol class="steps">
+        <li><span><b>Install.</b> Mac: open the .dmg and drag Car Scanner to Applications. Windows: unzip and run <span class="mono">CarScanner.exe</span>.</span></li>
+        <li><span><b>Open it the first time.</b> The app isn't signed with a paid certificate yet, so your computer warns you. Mac: right-click the app and choose <b>Open</b>. Windows: <b>More info → Run anyway</b>.</span></li>
+        <li><span><b>Connect.</b> Plug the adapter into the OBD port under the dashboard and into your laptop, turn the ignition on, and pick it in the app. Windows may need the <a href="https://ftdichip.com/drivers/vcp-drivers/">FTDI driver</a> for the vLinker FS.</span></li>
+        <li><span><b>Optional: AI.</b> In Settings, paste an Anthropic (Claude) or OpenAI API key to turn on problem plans, photo reports and the assistant.</span></li>
+      </ol>
+      <div class="panel" style="margin-top:28px">
+        <b>Adapters:</b> built for the <b>vLinker FS (USB)</b>; other ELM327-compatible USB adapters work too. The full module scan needs a CAN car (most cars from 2008 on); older cars get engine and emission codes.<br>
+        <b>Privacy:</b> the app runs at <span class="mono">127.0.0.1</span> and only answers on your computer. Photos and scans are stored in your user folder. Nothing is sent anywhere unless you use the AI, and then only to the provider whose key you entered.
+      </div>
+    </section>
+
+    <section>
+      <h2>For developers</h2>
+      <pre><code>git clone https://github.com/lordjhamb/car-scanner
+cd car-scanner
+make install
+make run</code></pre>
+      <p class="small">Python + FastAPI backend, no-build ES-module frontend, 150+ tests that run against a built-in car simulator. MIT licensed.</p>
+    </section>
+  </main>
+
+  <footer><span>Car Scanner · MIT License</span><a href="https://github.com/lordjhamb/car-scanner">Source</a><a href="https://github.com/lordjhamb/car-scanner/issues">Report a problem</a></footer>
+</div>
+<script>
+  // Highlight the download for this visitor's computer.
+  (function () {
+    var ua = navigator.userAgent, os = /Windows/i.test(ua) ? "win" : /Mac OS X|Macintosh/i.test(ua) ? "mac" : /Linux/i.test(ua) ? "linux" : null;
+    var el = os && document.querySelector('[data-os="' + os + '"]');
+    if (el) { el.classList.add("mine"); el.parentNode.insertBefore(el, el.parentNode.firstChild); }
+  })();
+</script>
+</body>
+</html>
